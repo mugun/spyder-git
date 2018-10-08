@@ -1,5 +1,5 @@
 # 腾讯新闻爬虫工具
-本工具为maven项目，需要使用jsoup和maven  
+本工具为maven项目，需要使用jsoup和html unit   
 其中：  
 spyderRun.java中是单线程方法。  
 APP.java中的是多线程方法，具体需要设置的线程数请在crawl.java中的ThreadPoolExecutor中进行调整  
