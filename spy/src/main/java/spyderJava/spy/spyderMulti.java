@@ -27,8 +27,8 @@ class spyderMulti implements Runnable{
 	//private FileWriter fw;
 	private static int num=0;
 	private String filePath;
-	public  spyderMulti(WebClient chrome,BlockingQueue<String> url,String tag,String filePath) {
-		this.chrome=chrome;
+	public  spyderMulti(BlockingQueue<String> url,String tag,String filePath) {
+		//this.chrome=chrome;
 		this.url=url;
 		this.tag=tag;
 		//this.fw=fw;
