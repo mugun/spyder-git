@@ -24,14 +24,20 @@ public class App
     	//程序是否有url 跳转？有1无0
     	//String jump=args[3];
     	//需要保存到文件名字
-    	String fileName="F:/workspace/spy/temp/result.txt";
-    	String tempPath="F:/workspace/spy/temp/";
-    	String outputPath="F:/workspace/spy/Output/result.txt";
+//    	String fileName="F:/workspace/spy/temp/result.txt";
+//		String fileName = ClassLoader.getSystemResource("temp/").getPath() + "result.txt";
+		String fileName = "src/main/resources/temp/result.txt";
+//    	String tempPath="F:/workspace/spy/temp/";
+//		String tempPath = ClassLoader.getSystemResource("temp/").getPath();
+		String tempPath = "src/main/resources/temp/";
+//    	String outputPath="F:/workspace/spy/Output/result.txt";
+//		String outputPath = ClassLoader.getSystemResource("output/").getPath() + "result.txt";
+		String outputPath = "src/main/resources/Output/result.txt";
     	String charset="&ie=utf8";
     	fileCombiner fcb=new fileCombiner(tempPath,outputPath);
     	fcb.deleteFile();
         crawl spy=new crawl(baseUrl,page,charset,fileName);
-        BlockingQueue que=spy.spyderFront("h3");
+        BlockingQueue<String> que=spy.spyderFront("pt");
         //List lis=spy.spyderMain(que, "#ArticleCnt");
        // spy.printRes(lis);
         spy.SpyMainMulti(que, "#ArticleCnt");
