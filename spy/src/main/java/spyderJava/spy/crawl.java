@@ -1,4 +1,8 @@
 package spyderJava.spy;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.FileLockInterruptionException;
+import java.nio.channels.OverlappingFileLockException;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -31,6 +35,10 @@ public class crawl {
 	//字符集
 	private String filename;
 	//用于存储的文件名
+
+	private static int MAXIMUM_POOL_SIZE = 4;
+	private static int CORE_POOL_SIZE = 2;
+
 	public String pattern="(http|ftp|https):\\/\\/[\\w\\-_]+(\\.[\\w\\-_]+)+([\\w\\-\\.,@?^=%&amp;:/~\\+#]*[\\w\\-\\@?^=%&amp;/~\\+#])?";
 	public crawl(String baseUrl,int page,String charset,String filename) {
 		this.baseUrl=baseUrl;
@@ -40,7 +48,7 @@ public class crawl {
 		this.charset=charset;
 		this.filename=filename;
 	}
-	public BlockingQueue spyderFront(String bodyFrame) throws IOException{
+	public BlockingQueue<String> spyderFront(String bodyFrame) throws IOException{
 
 		BlockingQueue<String> jumpUrl=new LinkedBlockingQueue<String>();
 		final WebClient chrome=new WebClient(BrowserVersion.CHROME);
@@ -63,11 +71,14 @@ public class crawl {
 			chrome.waitForBackgroundJavaScript(1000);
 			String pageXml=page.asXml();
 			Document doc=Jsoup.parse(pageXml);
-			List<Element> sourUrl=doc.select(bodyFrame);
+//			List<Element> sourUrl=doc.select(bodyFrame);
+			List<Element> sourUrl=doc.getElementsByClass(bodyFrame);
 			for(int i=0;i<sourUrl.size();i++) {
 				//遍历锁选择出来的内容
 				Elements elee=sourUrl.get(i).select("a");
-				jumpUrl.add(elee.attr("abs:href"));
+				if(!elee.isEmpty()) {
+					jumpUrl.add("https://www.sogou.com" + elee.get(0).attr("href"));
+				}
 			}
 		}
 		return jumpUrl;
@@ -103,11 +114,12 @@ public class crawl {
 		//关于多线程的方法
 		BlockingQueue<String> temp=new LinkedBlockingQueue<String>();
 
-		jumpUrl.poll();
-		ThreadPoolExecutor exec = new ThreadPoolExecutor(2,4,2000,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<Runnable>(4),new ThreadPoolExecutor.CallerRunsPolicy());
+//		jumpUrl.poll();
+		ThreadPoolExecutor exec = new ThreadPoolExecutor(CORE_POOL_SIZE,MAXIMUM_POOL_SIZE,2000,TimeUnit.MILLISECONDS, new ArrayBlockingQueue<Runnable>(100),new ThreadPoolExecutor.CallerRunsPolicy());
+		initTempFiles();
 		while(!jumpUrl.isEmpty()) {
 		//for(int i=0;i<10;i++) {
-			exec.execute(new spyderMulti(jumpUrl,tag,this.filename));
+			exec.execute(new spyderMulti(jumpUrl,tag, this.filename));
 			//如果需要测试，请把jumpUrl改成temp并将上面的注释打开
 		}
 		exec.shutdown();
@@ -120,5 +132,46 @@ public class crawl {
 			fw.write(result.get(i));
 		}
 		fw.close();
+	}
+
+	private void initTempFiles() {
+		for(int i = 0; i< MAXIMUM_POOL_SIZE; i++) {
+			try {
+				new File(this.filename + "" + i).createNewFile();
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+				System.exit(233);
+			}
+		}
+	}
+
+	public static String getFilenameNotLocked(String filename) {
+		for(int i = 0; i< MAXIMUM_POOL_SIZE; i++) {
+			try {
+				FileChannel channel = new RandomAccessFile(filename + "" + i, "rw").getChannel();
+				FileLock lock = channel.tryLock();
+				if(lock != null) {
+					lock.release();
+					return filename + "" + i;
+				}
+			}
+			catch (FileNotFoundException e) {
+				try {
+					new File(filename + "" + i).createNewFile();
+				}
+				catch (IOException error) {
+					System.out.println(error.getMessage());
+				}
+			}
+			catch (IOException e) {
+				System.out.println(e.getMessage());
+			}
+			catch (OverlappingFileLockException e) {
+				System.out.println(e.getMessage());
+			}
+		}
+
+		return null;
 	}
 }
